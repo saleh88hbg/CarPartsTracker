@@ -12,12 +12,12 @@ def main():
 
     reg_num = input("Mata in reg-nr (t.ex. ABC123): ").strip().upper()
     try:
-        mileage = int(input("Mata in nuvarande miltal (i mil, t.ex. 12500): ").strip()) * 10 # Omvandla mil till km
+        mileage_input = input("Mata in nuvarande miltal (i mil, t.ex. 12500): ").strip()
+        mileage = int(mileage_input) * 10
     except ValueError:
-        mileage = 120000  # Standard fallback ifall felaktig inmatning
+        mileage = 120000
 
     with Session(engine) as session:
-        # 1. Hämta / Cacha fordon
         statement = select(Vehicle).where(Vehicle.reg_number == reg_num)
         vehicle = session.exec(statement).first()
 
@@ -33,9 +33,8 @@ def main():
             return
 
         print(f"\n🚗 FORDON: {vehicle.make} {vehicle.model} ({vehicle.year}) - {vehicle.engine}")
-        print(f"Miltal: {mileage // 10} mil ({mileage} km)")
+        print(f"📏 MILTAL: {mileage // 10} mil ({mileage} km)")
 
-        # 2. Analysera servicebehov baserat på miltal
         print("\n--------------------------------------------------")
         print("💡 EXPERTREKOMMENDERADE SERVICEPAKET")
         print("--------------------------------------------------")
@@ -46,14 +45,16 @@ def main():
             print(f"\n{idx}. {urgency_icon} [{item.category.upper()}] {item.name}")
             print(f"   Beskrivning: {item.description}")
             
-            # 3. Hämta live-priser för rekommenderad del/sökord
             main_keyword = item.search_keywords[0]
             prices = search_live_prices(main_keyword)
 
-            print("   --- Live Prisjämförelse ---")
+            print("   --- Skarpa Live-Priser ---")
             for p in prices:
                 total = p["price_sek"] + p["shipping_cost_sek"]
-                print(f"   • {p['store_name']}: {p['price_sek']:.0f} kr (+ {p['shipping_cost_sek']:.0f} kr frakt) = Totalt: {total:.0f} kr [{p['delivery_days']}]")
+                stock_status = "I lager" if p["in_stock"] else "Ej i lager"
+                title_str = f" ({p.get('title')})" if 'title' in p else ""
+                print(f"   • {p['store_name']}{title_str}: {p['price_sek']:.0f} kr (+ {p['shipping_cost_sek']:.0f} kr frakt) = Totalt: {total:.0f} kr [{stock_status}]")
+                print(f"     🔗 Länk: {p['url']}")
 
 if __name__ == "__main__":
     main()
